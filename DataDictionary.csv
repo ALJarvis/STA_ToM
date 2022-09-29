@@ -1,0 +1,9 @@
+﻿social_inference,whether it was Part 2 (social inference miniminal) or Part 3 (social inference enriched) on TASIT
+q_no,question number ranging from 1-15 for Part 1 and 1-16 for Part 3
+q_type,"whether it was a think (first-order cognitive ToM), feel (affective ToM), do (second-order cognitive ToM), or say (control) question"
+q_response,"whether the participant answered 1 (yes), 2 (no), or 3 (don't know)"
+correct_response,whether 1 (yes) or 2 (no) was the correct response
+sub_category,"whether exchange type was 1 (sincere), 2 (simple sarcasm), 3 (paradoxical sarcasm), 4 (lies), or 5 (sarcasm)"
+answer_correct,whether participants answered correctly (TRUE) of incorrectly (FALSE) 
+emotion,whether the participant was classified as having high or low emotion perception
+ID,participant id number 
