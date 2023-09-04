@@ -40,7 +40,7 @@ full_STA <- TOM_STA %>%
 full_STA$q_type <- factor(full_STA$q_type, levels = c("think", "do", "feel"))
 
 #Create tiff to save as image
-tiff(filename = "anova_plot.tiff", width = 8, height = 10, units = "in", res = 600, compression = "lzw")
+tiff(filename = "anova_plot.tiff", width = 4, height = 8, units = "in", res = 600, compression = "lzw")
 
 #Create colour palette
 colours <- c("#56b4e9", "#0072B2")
@@ -49,7 +49,7 @@ colours <- c("#56b4e9", "#0072B2")
 b <- ggplot(data = full_STA) +
   aes(x = q_type, y = meanEndorse, fill = emotion) +
   stat_summary(fun = mean, geom = "bar", position = "dodge") +
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.5, position = position_dodge (0.9)) + #position_dodge centers error bars
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2, position = position_dodge (0.9)) + #position_dodge centers error bars
   facet_wrap(sub_category ~ correct_response, nrow = 5) +
   xlab("Question type") +
   ylab("Participants' mean endorsements") +
