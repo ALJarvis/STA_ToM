@@ -5,3 +5,4 @@ R code for the analysis undertaken in Jarvis, A. L., Keage, H. A. D., Wong, S., 
 # File descriptions
 * STA.R: All state-trace analysis code
 * ANOVA.R: All analysis of variance code 
+* DataDictionary.csv: Data dictionary for all relevant code
