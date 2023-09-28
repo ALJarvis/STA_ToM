@@ -4,10 +4,11 @@ library(dplyr)
 library(rstatix)
 library(readxl)
 
-#Import TOM_STA dataset
 
-
-# Data wrangling ----------------------------------------------------------
+library(readxl)
+TOM_STA <- read_excel("C:/Users/jaral005/OneDrive - University of South Australia/Desktop/STA/Datasets/TOM_STA.xlsx", 
+                      na = "NA")
+View(TOM_STA)
 
 #Remove unnecessary columns
 TOM_STA <- TOM_STA[ , -which(names(TOM_STA) %in% c("participant_id", "social_inference"))]
@@ -26,7 +27,6 @@ TOM_STA$btwn_groups <- TOM_STA$emotion
 #Create new variable which combines q_no and sub_category
 TOM_STA$question <- paste(TOM_STA$q_no, TOM_STA$sub_category, sep = "_")
 
-
 # LOAD STACMR -------------------------------------------------------------
 
 #### Load STA CMR into R ####
@@ -43,8 +43,7 @@ setwd("C:/Users/jaral005/Documents/RStudio/STA-master/STACMR-R")
 source("staCMRsetup.R")
 
 
-
-# Do and think ------------------------------------------------------------
+# Do and think yes ------------------------------------------------------------
 
 #Label dependent variables
 dv1 = "do" #x-axis
@@ -53,160 +52,301 @@ dv2 = "think"  #y-axis
 #Pull out rows with do and think questions and assign do_think 
 do_think <- TOM_STA[TOM_STA$q_type %in% c(dv1, dv2),]
 
+#Create separate dfs for yes and no items
+do_think_yes <- do_think %>%
+  filter(q_type %in% c("do", "think"), correct_response == 1)
+
+do_think_no <- do_think %>%
+  filter(q_type %in% c("do", "think"), correct_response == 2)
+
 #add a new variable called 'dv' which will be q_type converted into a numeric 1 or 2 
 do_think$dv = 1
 do_think$dv[do_think$q_type == dv2] <- 2
 
-#calculate the average correct response across all questions for each participant
-do_think <- do_think %>%
-  filter(!is.na(answer_correct)) %>% # filter out na responses
+#Filter out no responses
+do_think_yes <- do_think %>%
+  filter(q_response != "0")
+
+#calculate the average question response across all questions for each participant & label this new variable 'meanEndorse'
+do_think_yes <- do_think_yes %>%
+  filter(!is.na(q_response)) %>% # filter out na responses
   group_by(ID, btwn_groups, dv, sub_category) %>%
-  summarize(meanCorrect = mean(answer_correct))
+  summarize(totalEndorse = sum(q_response))
 
 #re-arrange data to wide format
-do_think <- do_think %>%
-  spread(key = sub_category, value = meanCorrect) 
+do_think_yes <- do_think_yes %>%
+  spread(key = sub_category, value = totalEndorse) 
 
 #change dataframe to match with the STA sample data
-do_think <- data.frame(do_think)
-class(do_think)
-
-#check all variables are numeric except btwn_groups which should be a character 
-str(do_think) 
+do_think_yes <- data.frame(do_think_yes)
+class(do_think_yes)
 
 #draw plot, conduct CMR, add predicted points to plot:
-staPLOT(data = do_think, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+staPLOT(data = do_think_yes, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
         grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
                            "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
         axislabels = list(dv1, dv2), 
-        xlim = c(0,1), ylim = c(0,1))
+        xlim = c(0,10), ylim = c(0,10))
 
 #Find best-fitting monotonic points and print fit value 
-out1 = staCMR (data=do_think)
-out1$fval #fit value is 29.15
+out1 = staCMR (data=do_think_yes)
+out1$fval #fit value is 187.88
 
 #add 1D predictions to STA plot
-staPLOT(data = do_think, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+staPLOT(data = do_think_yes, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
         grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
                            "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
         axislabels = list(dv1, dv2), 
-        xlim = c(0,1), ylim = c(0,1), pred = out1$x)
+        xlim = c(0,10), ylim = c(0,10), pred = out1$x)
 
 # find p-value 
-out = staCMRFIT(do_think, nsample=10000)
+out = staCMRFIT(do_think_yes , nsample=10000)
 out$p # p = <.001
 
-#histogram of bootstrap distribution of fits
-hist(out$fits, breaks = 50)
+# Do and Think No ------------------------------------------------------------
+#Change q_response from 0 = no, 1 = yes, to 0 = yes, 1 = no
+do_think <- do_think %>%
+  mutate(q_response2 = ifelse(q_response == 1, 2, 1))
 
+#do_think$q_response <- ifelse(do_think$q_response == 0, 2, 1)
 
+#Filter out yes responses
+do_think_no <- do_think %>%
+  filter(q_response != "1")
 
-# Do and feel -------------------------------------------------------------
+#calculate the average question response across all questions for each participant & label this new variable 'meanEndorse'
+do_think_no <- do_think_no %>%
+  filter(!is.na(q_response2)) %>% # filter out na responses
+  group_by(ID, btwn_groups, dv, sub_category) %>%
+  summarize(totalEndorse = sum(q_response2))
+
+#re-arrange data to wide format
+do_think_no <- do_think_no %>%
+  spread(key = sub_category, value = totalEndorse) 
+
+#change dataframe to match with the STA sample data
+do_think_no <- data.frame(do_think_no)
+class(do_think_no)
+
+#draw plot, conduct CMR, add predicted points to plot:
+staPLOT(data = do_think_no, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+        grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
+                           "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
+        axislabels = list(dv1, dv2), 
+        xlim = c(0,10), ylim = c(0,10))
+
+#Find best-fitting monotonic points and print fit value 
+out1 = staCMR (data=do_think_no)
+out1$fval #fit value is 607.26
+
+#add 1D predictions to STA plot
+staPLOT(data = do_think_no, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+        grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
+                           "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
+        axislabels = list(dv1, dv2), 
+        xlim = c(0,10), ylim = c(0,10), pred = out1$x)
+
+# find p-value 
+out = staCMRFIT(do_think_no , nsample=10000)
+out$p # p = <.001
+
+# Do and feel yes ---------------------------------------------------------
 
 #Label dependent variables
 dv1 = "do" #x-axis
 dv2 = "feel"  #y-axis
 
-#Pull out rows with do and think questions and assign do_feel 
+#Pull out rows with do and feel questions and assign do_feel 
 do_feel <- TOM_STA[TOM_STA$q_type %in% c(dv1, dv2),]
 
 #add a new variable called 'dv' which will be q_type converted into a numeric 1 or 2 
 do_feel$dv = 1
 do_feel$dv[do_feel$q_type == dv2] <- 2
 
-#calculate the average correct response across all questions for each participant
-do_feel <- do_feel %>%
-  filter(!is.na(answer_correct)) %>% # filter out na responses
+#Filter out no responses
+do_feel_yes <- do_feel %>%
+  filter(q_response != "0")
+
+#calculate the average question response across all questions for each participant & label this new variable 'meanEndorse'
+do_feel_yes <- do_feel_yes %>%
+  filter(!is.na(q_response)) %>% # filter out na responses
   group_by(ID, btwn_groups, dv, sub_category) %>%
-  summarize(meanCorrect = mean(answer_correct))
+  summarize(totalEndorse = sum(q_response))
 
 #re-arrange data to wide format
-do_feel <- do_feel %>%
-  spread(key = sub_category, value = meanCorrect) 
+do_feel_yes <- do_feel_yes %>%
+  spread(key = sub_category, value = totalEndorse) 
 
 #change dataframe to match with the STA sample data
-do_feel <- data.frame(do_feel)
-class(do_feel)
-
-#check all variables are numeric except btwn_groups which should be a character 
-str(do_feel) 
+do_feel_yes <- data.frame(do_feel_yes)
+class(do_feel_yes)
 
 #draw plot, conduct CMR, add predicted points to plot:
-staPLOT(data = do_feel, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+staPLOT(data = do_feel_yes, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
         grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
                            "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
         axislabels = list(dv1, dv2), 
-        xlim = c(0,1), ylim = c(0,1))
+        xlim = c(0,10), ylim = c(0,10))
 
 #Find best-fitting monotonic points and print fit value 
-out1 = staCMR (data=do_feel)
-out1$fval #fit value is 29.15
+out1 = staCMR (data=do_feel_yes)
+out1$fval #fit value is 73.30
 
 #add 1D predictions to STA plot
-staPLOT(data = do_feel, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+staPLOT(data = do_feel_yes, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
         grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
                            "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
         axislabels = list(dv1, dv2), 
-        xlim = c(0,1), ylim = c(0,1), pred = out1$x)
+        xlim = c(0,10), ylim = c(0,10), pred = out1$x)
+
+
 # find p-value 
-out = staCMRFIT(do_feel, nsample=10000)
-out$p # p = .021
+out = staCMRFIT(do_feel_yes , nsample=10000)
+out$p # p = <.001
 
-#histogram of bootstrap distribution of fits
-hist(out$fits, breaks = 50)
+# Do and feel No ------------------------------------------------------------
+#Change q_response from 0 = no, 1 = yes, to 0 = yes, 1 = no
+do_feel <- do_feel %>%
+  mutate(q_response2 = ifelse(q_response == 1, 2, 1))
 
+#do_feel$q_response <- ifelse(do_feel$q_response == 0, 2, 1)
 
+#Filter out yes responses
+do_feel_no <- do_feel %>%
+  filter(q_response != "1")
 
-# Think and feel ----------------------------------------------------------
+#calculate the average question response across all questions for each participant & label this new variable 'meanEndorse'
+do_feel_no <- do_feel_no %>%
+  filter(!is.na(q_response2)) %>% # filter out na responses
+  group_by(ID, btwn_groups, dv, sub_category) %>%
+  summarize(totalEndorse = sum(q_response2))
 
+#re-arrange data to wide format
+do_feel_no <- do_feel_no %>%
+  spread(key = sub_category, value = totalEndorse) 
+
+#change dataframe to match with the STA sample data
+do_feel_no <- data.frame(do_feel_no)
+class(do_feel_no)
+
+#draw plot, conduct CMR, add predicted points to plot:
+staPLOT(data = do_feel_no, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+        grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
+                           "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
+        axislabels = list(dv1, dv2), 
+        xlim = c(0,10), ylim = c(0,10))
+
+#Find best-fitting monotonic points and print fit value 
+out1 = staCMR (data=do_feel_no)
+out1$fval #fit value is 221.36
+
+#add 1D predictions to STA plot
+staPLOT(data = do_feel_no, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+        grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
+                           "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
+        axislabels = list(dv1, dv2), 
+        xlim = c(0,10), ylim = c(0,10), pred = out1$x)
+
+# find p-value 
+out = staCMRFIT(do_feel_no , nsample=10000)
+out$p # p = <.001
+
+# Think and feel yes ------------------------------------------------------
 #Label dependent variables
 dv1 = "think" #x-axis
 dv2 = "feel"  #y-axis
 
-#Pull out rows with do and think questions and assign think_feel 
+#Pull out rows with think and feel questions and assign think_feel 
 think_feel <- TOM_STA[TOM_STA$q_type %in% c(dv1, dv2),]
 
 #add a new variable called 'dv' which will be q_type converted into a numeric 1 or 2 
 think_feel$dv = 1
 think_feel$dv[think_feel$q_type == dv2] <- 2
 
-#calculate the average correct response across all questions for each participant 
-think_feel <- think_feel %>%
-  filter(!is.na(answer_correct)) %>% # filter out na responses
+#Filter out no responses
+think_feel_yes <- think_feel %>%
+  filter(q_response != "0")
+
+#calculate the average question response across all questions for each participant & label this new variable 'meanEnthinkrse'
+think_feel_yes <- think_feel_yes %>%
+  filter(!is.na(q_response)) %>% # filter out na responses
   group_by(ID, btwn_groups, dv, sub_category) %>%
-  summarize(meanCorrect = mean(answer_correct))
+  summarize(totalEndorse = sum(q_response))
 
 #re-arrange data to wide format
-think_feel <- think_feel %>%
-  spread(key = sub_category, value = meanCorrect) 
+think_feel_yes <- think_feel_yes %>%
+  spread(key = sub_category, value = totalEndorse) 
 
 #change dataframe to match with the STA sample data
-think_feel <- data.frame(think_feel)
-class(think_feel)
-
-#check all variables are numeric except btwn_groups which should be a character 
-str(think_feel) 
+think_feel_yes <- data.frame(think_feel_yes)
+class(think_feel_yes)
 
 #draw plot, conduct CMR, add predicted points to plot:
-staPLOT(data = think_feel, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+staPLOT(data = think_feel_yes, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
         grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
                            "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
         axislabels = list(dv1, dv2), 
-        xlim = c(0,1), ylim = c(0,1))
+        xlim = c(0,10), ylim = c(0,10))
 
 #Find best-fitting monotonic points and print fit value 
-out1 = staCMR (data=think_feel)
-out1$fval #fit value is 29.15
+out1 = staCMR (data=think_feel_yes)
+out1$fval #fit value is 107.10
 
 #add 1D predictions to STA plot
-staPLOT(data = think_feel, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+staPLOT(data = think_feel_yes, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
         grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
                            "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
         axislabels = list(dv1, dv2), 
-        xlim = c(0,1), ylim = c(0,1), pred = out1$x)
-# find p-value 
-out = staCMRFIT(think_feel, nsample=10000)
-out$p # p = .013
+        xlim = c(0,10), ylim = c(0,10), pred = out1$x)
 
-#histogram of bootstrap distribution of fits
-hist(out$fits, breaks = 50)
+# find p-value 
+out = staCMRFIT(think_feel_yes , nsample=10000)
+out$p # p = <.001
+
+# Think and feel No ------------------------------------------------------------
+#Change q_response from 0 = no, 1 = yes, to 0 = yes, 1 = no
+think_feel <- think_feel %>%
+  mutate(q_response2 = ifelse(q_response == 1, 2, 1))
+
+#think_feel$q_response <- ifelse(think_feel$q_response == 0, 2, 1)
+
+#Filter out yes responses
+think_feel_no <- think_feel %>%
+  filter(q_response != "1")
+
+#calculate the average question response across all questions for each participant & label this new variable 'meanEnthinkrse'
+think_feel_no <- think_feel_no %>%
+  filter(!is.na(q_response2)) %>% # filter out na responses
+  group_by(ID, btwn_groups, dv, sub_category) %>%
+  summarize(totalEndorse = sum(q_response2))
+
+#re-arrange data to wide format
+think_feel_no <- think_feel_no %>%
+  spread(key = sub_category, value = totalEndorse) 
+
+#change dataframe to match with the STA sample data
+think_feel_no <- data.frame(think_feel_no)
+class(think_feel_no)
+
+#draw plot, conduct CMR, add predicted points to plot:
+staPLOT(data = think_feel_no, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+        grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
+                           "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
+        axislabels = list(dv1, dv2), 
+        xlim = c(0,10), ylim = c(0,10))
+
+#Find best-fitting monotonic points and print fit value 
+out1 = staCMR (data=think_feel_no)
+out1$fval #fit value is 154.80
+
+#add 1D predictions to STA plot
+staPLOT(data = think_feel_no, groups = list( c(1), c(2), c(3), c(4), c(5), c(6), c(7), c(8), c(9), c(10)),
+        grouplabels = list("Low-Lies", "Low-Paradoxical sarcasm", "Low-Sarcasm", "Low-Simple sarcasm", "Low-Sincere", 
+                           "High-Lies", "High-Paradoxical sarcasm", "High-Sarcasm", "High-Simple sarcasm", "High-Sincere"),
+        axislabels = list(dv1, dv2), 
+        xlim = c(0,10), ylim = c(0,10), pred = out1$x)
+
+# find p-value 
+out = staCMRFIT(think_feel_no , nsample=10000)
+out$p # p = <.001
+
