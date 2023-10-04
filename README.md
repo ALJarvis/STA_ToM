@@ -6,3 +6,4 @@ R code for the analysis undertaken in Jarvis, A. L., Keage, H. A. D., Wong, S., 
 * STA.R: All state-trace analysis code
 * ANOVA.R: All analysis of variance code 
 * DataDictionary.csv: Data dictionary for all relevant code
+* SupplementaryAnalyses: ALl analysis code for the supplementary materials
