@@ -126,11 +126,11 @@ out2 = staCMRFIT(do_think_no , nsample=10000)
 out2$p # p = <.001
 
 
-# Do and feel yes ---------------------------------------------------------
+# Do and feel ---------------------------------------------------------
 
 #Label dependent variables
-dv1 = "do" #x-axis
-dv2 = "feel"  #y-axis
+dv1 = "feel" #x-axis
+dv2 = "do"  #y-axis
 
 #Pull out rows with do and feel questions and assign do_feel 
 do_feel <- TOM_STA[TOM_STA$q_type %in% c(dv1, dv2),]
@@ -212,8 +212,8 @@ out4$p # p = <.001
 
 # Think and feel yes ------------------------------------------------------
 #Label dependent variables
-dv1 = "think" #x-axis
-dv2 = "feel"  #y-axis
+dv1 = "feel" #x-axis
+dv2 = "think"  #y-axis
 
 #Pull out rows with think and feel questions and assign think_feel 
 think_feel <- TOM_STA[TOM_STA$q_type %in% c(dv1, dv2),]
